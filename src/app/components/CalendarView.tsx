@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Hash, Image as ImageIcon, Sparkles, MoreHorizontal } from 'lucide-react';
 import { ServerDisplaySettingsModal } from './ServerDisplaySettingsModal';
 import { ServerSelectorModal } from './ServerSelectorModal';
@@ -18,7 +18,7 @@ interface CalendarViewProps {
   onServerClick: (serverId: string) => void;
 }
 
-// Mock data - 실제로는 Supabase에서 가져와야 함
+// Mock data
 const initialMockServers: Server[] = [
   { id: '1', name: '오늘의 기록', date: '2026-05-09', displayType: 'text', color: 'bg-purple-500' },
   { id: '2', name: '제주도 여행', date: '2026-05-06', displayType: 'text', color: 'bg-blue-500' },
@@ -27,6 +27,32 @@ const initialMockServers: Server[] = [
 ];
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/${functionName}`;
+const LOCAL_SETTINGS_KEY = 'dayserver-calendar-settings';
+
+type ServerSetting = {
+  serverId: string;
+  displayType: 'text' | 'highlight' | 'image';
+  thumbnail?: string;
+};
+
+const readLocalSettings = (): ServerSetting[] => {
+  try {
+    const raw = localStorage.getItem(LOCAL_SETTINGS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeLocalSettings = (settings: ServerSetting[]) => {
+  try {
+    localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // ignore localStorage write errors
+  }
+};
 
 export function CalendarView({ onServerClick }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -79,7 +105,7 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
       isOpen: true,
       serverId: server.id,
       serverName: server.name,
-      currentDisplayType: server.displayType,
+      currentDisplayType: selectedDisplayType,
       currentThumbnail: server.thumbnail,
     });
   };
@@ -92,6 +118,8 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
   const loadServerSettings = async () => {
     try {
       setLoading(true);
+      let loadedSettings: ServerSetting[] = [];
+
       const response = await fetch(`${API_BASE}/server-settings`, {
         headers: {
           'Authorization': `Bearer ${publicAnonKey}`,
@@ -101,30 +129,48 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
       if (response.ok) {
         const data = await response.json();
         if (data.settings && Array.isArray(data.settings)) {
-          // Merge loaded settings with initial servers
-          const updatedServers = initialMockServers.map(server => {
-            const savedSetting = data.settings.find((s: any) => s.serverId === server.id);
-            if (savedSetting) {
-              return {
-                ...server,
-                displayType: savedSetting.displayType,
-                thumbnail: savedSetting.thumbnail,
-              };
-            }
-            return server;
-          });
-          setServers(updatedServers);
+          loadedSettings = data.settings;
+          writeLocalSettings(loadedSettings);
         }
       }
+
+      if (loadedSettings.length === 0) {
+        loadedSettings = readLocalSettings();
+      }
+
+      const updatedServers = initialMockServers.map(server => {
+        const savedSetting = loadedSettings.find((s: any) => s.serverId === server.id);
+        if (savedSetting) {
+          return {
+            ...server,
+            displayType: savedSetting.displayType,
+            thumbnail: savedSetting.thumbnail,
+          };
+        }
+        return server;
+      });
+      setServers(updatedServers);
     } catch (error) {
       console.error('Error loading server settings:', error);
+      const localSettings = readLocalSettings();
+      const updatedServers = initialMockServers.map(server => {
+        const savedSetting = localSettings.find((s: any) => s.serverId === server.id);
+        if (savedSetting) {
+          return {
+            ...server,
+            displayType: savedSetting.displayType,
+            thumbnail: savedSetting.thumbnail,
+          };
+        }
+        return server;
+      });
+      setServers(updatedServers);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSaveSettings = async (serverId: string, displayType: 'text' | 'highlight' | 'image', thumbnail?: string) => {
-    // Update local state
     setServers(prevServers =>
       prevServers.map(server =>
         server.id === serverId
@@ -133,7 +179,19 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
       )
     );
 
-    // Save to Supabase
+    const upsertLocal = () => {
+      const localSettings = readLocalSettings();
+      const existingIndex = localSettings.findIndex((setting) => setting.serverId === serverId);
+      const nextSetting: ServerSetting = { serverId, displayType, thumbnail };
+
+      if (existingIndex >= 0) {
+        localSettings[existingIndex] = nextSetting;
+      } else {
+        localSettings.push(nextSetting);
+      }
+      writeLocalSettings(localSettings);
+    };
+
     try {
       const response = await fetch(`${API_BASE}/server-settings`, {
         method: 'POST',
@@ -151,9 +209,12 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
       if (!response.ok) {
         throw new Error('Failed to save server settings');
       }
+
+      upsertLocal();
     } catch (error) {
       console.error('Error saving server settings:', error);
-      alert('설정 저장에 실패했습니다.');
+      upsertLocal();
+      alert('서버 저장에 실패해 로컬에 임시 저장했습니다.');
     }
   };
 
@@ -187,7 +248,7 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
               isToday ? 'ring-2 ring-purple-500' : ''
             }`}
           >
-            {/* 이미지 타입: 전체를 이미지로 채움 */}
+            {/* ?대?吏 ??? ?꾩껜瑜??대?吏濡?梨꾩? */}
             {primaryServer?.displayType === 'image' && primaryServer.thumbnail ? (
               <>
                 <button
@@ -222,7 +283,7 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
                 )}
               </>
             ) : (
-              /* 텍스트/하이라이트 타입: 기존 방식 */
+              /* ?띿뒪???섏씠?쇱씠????? 湲곗〈 諛⑹떇 */
               <div className={`w-full h-full p-2 ${isToday ? 'bg-purple-50' : 'bg-white'}`}>
                 <div className={`text-xs md:text-sm font-medium mb-1 ${isToday ? 'text-purple-600' : 'text-gray-700'}`}>
                   {dayNumber}
@@ -314,7 +375,7 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
           </div>
         </div>
         <p className="text-sm md:text-base text-gray-600">
-          서버를 클릭하면 해당 서버로 이동합니다
+          서버를 클릭하면 해당 서버로 이동합니다.
         </p>
       </div>
 
@@ -365,7 +426,7 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
           onClose={() => setSettingsModal(null)}
           serverId={settingsModal.serverId}
           serverName={settingsModal.serverName}
-          currentDisplayType={selectedDisplayType}
+          currentDisplayType={settingsModal.currentDisplayType}
           currentThumbnail={settingsModal.currentThumbnail}
           onSave={(displayType, thumbnail) => {
             handleSaveSettings(settingsModal.serverId, displayType, thumbnail);
@@ -376,7 +437,7 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
       {/* Legend */}
       <div className="p-4 md:p-6 border-t border-gray-200 bg-gray-50">
         <h3 className="text-sm font-semibold text-gray-700 mb-3">표시 방식 변경</h3>
-        <p className="text-xs text-gray-500 mb-3">아래 버튼을 클릭하여 서버의 표시 방식을 변경하세요</p>
+        <p className="text-xs text-gray-500 mb-3">아래 버튼을 클릭해 서버 표시 방식을 변경하세요.</p>
         <div className="flex gap-3 flex-wrap">
           <button
             onClick={() => handleDisplayTypeClick('text')}
@@ -410,3 +471,6 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
     </div>
   );
 }
+
+
+
