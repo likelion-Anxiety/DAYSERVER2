@@ -1,34 +1,45 @@
-import { useState, useEffect } from 'react';
-import { X, Hash, Sparkles, Image as ImageIcon, Check } from 'lucide-react';
+﻿import { useState, useEffect } from 'react'
+import { X, Hash, Sparkles, Image as ImageIcon, Check } from 'lucide-react'
+import {
+  functionName,
+  projectId,
+  publicAnonKey,
+} from '../../../utils/supabase/info'
 
 interface ServerImage {
-  id: string;
-  url: string;
-  timestamp: string;
+  id: string
+  url: string
+  timestamp: string
+}
+
+interface ChatMessage {
+  id: string
+  image?: string | null
+  timestamp?: string
+  type?: 'text' | 'image'
 }
 
 interface ServerDisplaySettingsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  serverId: string;
-  serverName: string;
-  currentDisplayType: 'text' | 'highlight' | 'image';
-  currentThumbnail?: string;
-  onSave: (displayType: 'text' | 'highlight' | 'image', thumbnail?: string) => void;
+  isOpen: boolean
+  onClose: () => void
+  serverId: string
+  serverName: string
+  currentDisplayType: 'text' | 'highlight' | 'image'
+  currentThumbnail?: string
+  onSave: (
+    displayType: 'text' | 'highlight' | 'image',
+    thumbnail?: string,
+  ) => void
 }
 
-// Mock data - 실제로는 Supabase에서 가져와야 함
-const mockServerImages: Record<string, ServerImage[]> = {
-  '1': [
-    { id: '1', url: 'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=400', timestamp: '2026-05-09 10:30' },
-    { id: '2', url: 'https://images.unsplash.com/photo-1682687221038-404cb8830901?w=400', timestamp: '2026-05-09 14:20' },
-    { id: '3', url: 'https://images.unsplash.com/photo-1682687220063-4742bd7fd538?w=400', timestamp: '2026-05-09 18:45' },
-  ],
-  '2': [
-    { id: '1', url: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400', timestamp: '2026-05-06 09:15' },
-    { id: '2', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', timestamp: '2026-05-06 12:30' },
-  ],
-};
+const API_BASE = `https://${projectId}.supabase.co/functions/v1/${functionName}`
+
+const formatTimestamp = (timestamp?: string) => {
+  if (!timestamp) return 'Unknown time'
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return 'Unknown time'
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
 
 export function ServerDisplaySettingsModal({
   isOpen,
@@ -39,41 +50,104 @@ export function ServerDisplaySettingsModal({
   currentThumbnail,
   onSave,
 }: ServerDisplaySettingsModalProps) {
-  const [selectedType, setSelectedType] = useState<'text' | 'highlight' | 'image'>(currentDisplayType);
-  const [selectedImage, setSelectedImage] = useState<string | undefined>(currentThumbnail);
-  const [serverImages, setServerImages] = useState<ServerImage[]>([]);
+  const [selectedType, setSelectedType] = useState<
+    'text' | 'highlight' | 'image'
+  >(currentDisplayType)
+  const [selectedImage, setSelectedImage] = useState<string | undefined>(
+    currentThumbnail,
+  )
+  const [serverImages, setServerImages] = useState<ServerImage[]>([])
+  const [loadingImages, setLoadingImages] = useState(false)
 
   useEffect(() => {
-    if (isOpen) {
-      // 실제로는 Supabase에서 서버의 이미지들을 가져와야 함
-      setServerImages(mockServerImages[serverId] || []);
-      setSelectedType(currentDisplayType);
-      setSelectedImage(currentThumbnail);
+    if (!isOpen) return
+
+    setSelectedType(currentDisplayType)
+    setSelectedImage(currentThumbnail)
+
+    const loadServerImages = async () => {
+      setLoadingImages(true)
+      try {
+        const response = await fetch(`${API_BASE}/messages/${serverId}`, {
+          headers: {
+            Authorization: `Bearer ${publicAnonKey}`,
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to load server messages')
+        }
+
+        const data = await response.json()
+        const messages: ChatMessage[] = Array.isArray(data.messages)
+          ? data.messages
+          : []
+
+        const imageMessages = messages
+          .filter(
+            (message) =>
+              message.type === 'image' &&
+              typeof message.image === 'string' &&
+              message.image.length > 0,
+          )
+          .map((message) => ({
+            id: message.id,
+            url: message.image as string,
+            timestamp: formatTimestamp(message.timestamp),
+          }))
+          .reverse()
+
+        setServerImages(imageMessages)
+
+        if (
+          currentThumbnail &&
+          imageMessages.some((img) => img.url === currentThumbnail)
+        ) {
+          setSelectedImage(currentThumbnail)
+        } else if (
+          !currentThumbnail &&
+          imageMessages.length > 0 &&
+          selectedType === 'image'
+        ) {
+          setSelectedImage(imageMessages[0].url)
+        }
+      } catch (error) {
+        console.error('Error loading server images:', error)
+        setServerImages([])
+      } finally {
+        setLoadingImages(false)
+      }
     }
-  }, [isOpen, serverId, currentDisplayType, currentThumbnail]);
+
+    loadServerImages()
+  }, [isOpen, serverId, currentDisplayType, currentThumbnail, selectedType])
 
   const handleSave = () => {
     if (selectedType === 'image' && !selectedImage) {
-      alert('이미지를 선택해주세요.');
-      return;
+      alert('이미지를 선택해주세요.')
+      return
     }
-    onSave(selectedType, selectedType === 'image' ? selectedImage : undefined);
-    onClose();
-  };
+    onSave(selectedType, selectedType === 'image' ? selectedImage : undefined)
+    onClose()
+  }
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <div
         className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">서버 표시 설정</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                서버 표시 설정
+              </h2>
               <p className="text-sm text-gray-600 mt-1">#{serverName}</p>
             </div>
             <button
@@ -85,28 +159,27 @@ export function ServerDisplaySettingsModal({
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">표시 방식 선택</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+              표시 방식 선택
+            </h3>
             <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={() => setSelectedType('text')}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  selectedType === 'text'
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className={`p-4 rounded-xl border-2 transition-all ${selectedType === 'text' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
               >
                 <div className="flex flex-col items-center gap-2">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    selectedType === 'text' ? 'bg-purple-500' : 'bg-gray-200'
-                  }`}>
-                    <Hash className={`w-6 h-6 ${selectedType === 'text' ? 'text-white' : 'text-gray-600'}`} />
+                  <div
+                    className={`w-12 h-12 rounded-lg flex items-center justify-center ${selectedType === 'text' ? 'bg-purple-500' : 'bg-gray-200'}`}
+                  >
+                    <Hash
+                      className={`w-6 h-6 ${selectedType === 'text' ? 'text-white' : 'text-gray-600'}`}
+                    />
                   </div>
-                  <span className={`text-sm font-medium ${
-                    selectedType === 'text' ? 'text-purple-600' : 'text-gray-700'
-                  }`}>
+                  <span
+                    className={`text-sm font-medium ${selectedType === 'text' ? 'text-purple-600' : 'text-gray-700'}`}
+                  >
                     텍스트
                   </span>
                 </div>
@@ -114,21 +187,19 @@ export function ServerDisplaySettingsModal({
 
               <button
                 onClick={() => setSelectedType('highlight')}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  selectedType === 'highlight'
-                    ? 'border-pink-500 bg-pink-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className={`p-4 rounded-xl border-2 transition-all ${selectedType === 'highlight' ? 'border-pink-500 bg-pink-50' : 'border-gray-200 hover:border-gray-300'}`}
               >
                 <div className="flex flex-col items-center gap-2">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    selectedType === 'highlight' ? 'bg-pink-500' : 'bg-gray-200'
-                  }`}>
-                    <Sparkles className={`w-6 h-6 ${selectedType === 'highlight' ? 'text-white' : 'text-gray-600'}`} />
+                  <div
+                    className={`w-12 h-12 rounded-lg flex items-center justify-center ${selectedType === 'highlight' ? 'bg-pink-500' : 'bg-gray-200'}`}
+                  >
+                    <Sparkles
+                      className={`w-6 h-6 ${selectedType === 'highlight' ? 'text-white' : 'text-gray-600'}`}
+                    />
                   </div>
-                  <span className={`text-sm font-medium ${
-                    selectedType === 'highlight' ? 'text-pink-600' : 'text-gray-700'
-                  }`}>
+                  <span
+                    className={`text-sm font-medium ${selectedType === 'highlight' ? 'text-pink-600' : 'text-gray-700'}`}
+                  >
                     하이라이트
                   </span>
                 </div>
@@ -136,21 +207,19 @@ export function ServerDisplaySettingsModal({
 
               <button
                 onClick={() => setSelectedType('image')}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  selectedType === 'image'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className={`p-4 rounded-xl border-2 transition-all ${selectedType === 'image' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
               >
                 <div className="flex flex-col items-center gap-2">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    selectedType === 'image' ? 'bg-blue-500' : 'bg-gray-200'
-                  }`}>
-                    <ImageIcon className={`w-6 h-6 ${selectedType === 'image' ? 'text-white' : 'text-gray-600'}`} />
+                  <div
+                    className={`w-12 h-12 rounded-lg flex items-center justify-center ${selectedType === 'image' ? 'bg-blue-500' : 'bg-gray-200'}`}
+                  >
+                    <ImageIcon
+                      className={`w-6 h-6 ${selectedType === 'image' ? 'text-white' : 'text-gray-600'}`}
+                    />
                   </div>
-                  <span className={`text-sm font-medium ${
-                    selectedType === 'image' ? 'text-blue-600' : 'text-gray-700'
-                  }`}>
+                  <span
+                    className={`text-sm font-medium ${selectedType === 'image' ? 'text-blue-600' : 'text-gray-700'}`}
+                  >
                     이미지
                   </span>
                 </div>
@@ -158,17 +227,24 @@ export function ServerDisplaySettingsModal({
             </div>
           </div>
 
-          {/* Image Selection */}
           {selectedType === 'image' && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-3">
                 대표 이미지 선택 ({serverImages.length}개)
               </h3>
-              {serverImages.length === 0 ? (
+              {loadingImages ? (
+                <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-xl">
+                  <p className="text-gray-600">채팅 이미지를 불러오는 중...</p>
+                </div>
+              ) : serverImages.length === 0 ? (
                 <div className="p-8 text-center border-2 border-dashed border-gray-300 rounded-xl">
                   <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-600">이 서버에 업로드된 이미지가 없습니다.</p>
-                  <p className="text-sm text-gray-500 mt-1">서버에 이미지를 올린 후 다시 시도해주세요.</p>
+                  <p className="text-gray-600">
+                    이 서버 채팅에 저장된 이미지가 없습니다.
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    채팅에서 이미지를 전송한 후 다시 시도해주세요.
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-3">
@@ -176,11 +252,7 @@ export function ServerDisplaySettingsModal({
                     <button
                       key={image.id}
                       onClick={() => setSelectedImage(image.url)}
-                      className={`relative aspect-square rounded-xl overflow-hidden border-3 transition-all ${
-                        selectedImage === image.url
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-transparent hover:border-gray-300'
-                      }`}
+                      className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${selectedImage === image.url ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:border-gray-300'}`}
                     >
                       <img
                         src={image.url}
@@ -195,7 +267,9 @@ export function ServerDisplaySettingsModal({
                         </div>
                       )}
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                        <p className="text-xs text-white font-medium">{image.timestamp}</p>
+                        <p className="text-xs text-white font-medium">
+                          {image.timestamp}
+                        </p>
                       </div>
                     </button>
                   ))}
@@ -205,7 +279,6 @@ export function ServerDisplaySettingsModal({
           )}
         </div>
 
-        {/* Footer */}
         <div className="p-6 border-t border-gray-200 flex gap-3">
           <button
             onClick={onClose}
@@ -222,5 +295,5 @@ export function ServerDisplaySettingsModal({
         </div>
       </div>
     </div>
-  );
+  )
 }
