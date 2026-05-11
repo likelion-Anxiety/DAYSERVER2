@@ -164,11 +164,22 @@ app.post("/ai/summary", async (c) => {
     if (!serverId) return c.json({ error: "Missing required field: serverId" }, 400);
 
     // 1. Check Cache
+    const cached = await kv.get(`summary:${serverId}`);
+    if (cached && !forceRefresh) {
+      return c.json({ summary: cached, source: "cache" });
+    }
+
+    // 2. If no cache and not forced, do NOT generate
     if (!forceRefresh) {
-      const cached = await kv.get(`summary:${serverId}`);
-      if (cached) {
-        return c.json({ summary: cached, source: "cache" });
-      }
+      return c.json({ 
+        summary: {
+          mood: "요약을 생성해보세요.",
+          topMoments: ["AI 요약 버튼을 눌러주세요."],
+          quote: "대표 문장이 아직 없습니다.",
+          highlights: ["버튼을 눌러 대화 분석을 시작하세요."]
+        },
+        source: "none"
+      });
     }
 
     const messages = await kv.getByPrefix(`messages:${serverId}:`);

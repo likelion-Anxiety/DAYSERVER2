@@ -106,6 +106,15 @@ export function AISummaryPanel({ serverId = '1' }: AISummaryPanelProps) {
 
       if (!summaryRes.ok) throw new Error('Failed to fetch summary');
       const summaryData = await summaryRes.json();
+      
+      // If server says no summary exists and not forced, stop here
+      if (summaryData.source === 'none') {
+        setSummary(summaryData.summary);
+        setCards([]);
+        setLoading(false);
+        return;
+      }
+
       const nextSummary: SummaryPayload = summaryData.summary || defaultSummary;
       setSummary(nextSummary);
 
