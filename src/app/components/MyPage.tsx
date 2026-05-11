@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Settings, Image as ImageIcon, Type, Grid, Save, Plus, X, Move } from 'lucide-react';
+﻿import { useState } from 'react';
+import { Settings, Image as ImageIcon, Save, Plus, X, Move } from 'lucide-react';
+import { supabase } from '../../../utils/supabase/client';
 
 interface Widget {
   id: string;
@@ -22,16 +23,26 @@ const defaultWidgets: Widget[] = [
 export function MyPage({ userId, isOwner }: MyPageProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [bannerImage, setBannerImage] = useState('https://images.unsplash.com/photo-1557683316-973673baf926?w=1200');
-  const [profileImage, setProfileImage] = useState('https://api.dicebear.com/7.x/avataaars/svg?seed=user');
+  const [profileImage, setProfileImage] = useState(`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || 'user'}`);
   const [bannerColor, setBannerColor] = useState('#8B5CF6');
-  const [bio, setBio] = useState('여행과 사진을 좋아하는 개발자 🌍📸');
+  const [bio, setBio] = useState('여행과 사진을 좋아하는 개발자입니다.');
   const [widgets, setWidgets] = useState<Widget[]>(defaultWidgets);
   const [showBannerCustomize, setShowBannerCustomize] = useState(false);
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Logout error:', error);
+      alert('로그아웃에 실패했습니다.');
+      return;
+    }
+    alert('로그아웃되었습니다.');
+  };
 
   const recentPosts = [
     { id: '1', title: '제주도 여행', image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400', date: '2026-05-06' },
     { id: '2', title: 'MT 추억', image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400', date: '2026-04-25' },
-    { id: '3', title: '서핑 도전', image: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=400', date: '2026-05-03' },
+    { id: '3', title: '새벽 산책', image: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=400', date: '2026-05-03' },
   ];
 
   const gallery = [
@@ -44,8 +55,8 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
   ];
 
   const friends = [
-    { id: '1', name: '이지은', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=2' },
-    { id: '2', name: '최수영', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=4' },
+    { id: '1', name: '이유진', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=2' },
+    { id: '2', name: '최수민', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=4' },
     { id: '3', name: '박서준', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=3' },
   ];
 
@@ -57,8 +68,8 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
             <div className="flex items-center gap-4">
               <img src={profileImage} alt="Profile" className="w-20 h-20 rounded-full" />
               <div>
-                <h3 className="text-xl font-bold text-gray-900">dlaudwn329</h3>
-                <p className="text-gray-600 text-sm">@dlaudwn329</p>
+                <h3 className="text-xl font-bold text-gray-900">{userId || 'user'}</h3>
+                <p className="text-gray-600 text-sm">@{userId || 'user'}</p>
                 <div className="flex gap-4 mt-2 text-sm">
                   <span><strong>142</strong> 친구</span>
                   <span><strong>28</strong> 게시물</span>
@@ -90,7 +101,7 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
           <div className="bg-white rounded-xl shadow-sm p-6 border-2 border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-4">최근 게시물</h3>
             <div className="space-y-3">
-              {recentPosts.map(post => (
+              {recentPosts.map((post) => (
                 <div key={post.id} className="flex gap-3 hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
                   <img src={post.image} alt={post.title} className="w-16 h-16 rounded-lg object-cover" />
                   <div>
@@ -120,7 +131,7 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
           <div className="bg-white rounded-xl shadow-sm p-6 border-2 border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-4">친구 ({friends.length})</h3>
             <div className="grid grid-cols-3 gap-3">
-              {friends.map(friend => (
+              {friends.map((friend) => (
                 <div key={friend.id} className="text-center">
                   <img src={friend.avatar} alt={friend.name} className="w-16 h-16 rounded-full mx-auto mb-2" />
                   <p className="text-xs font-medium text-gray-700 truncate">{friend.name}</p>
@@ -145,7 +156,6 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
 
   return (
     <div className="flex-1 h-full overflow-y-auto bg-gray-50">
-      {/* Banner */}
       <div
         className="relative h-64 bg-cover bg-center"
         style={{
@@ -160,7 +170,7 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
             className="absolute top-4 right-4 px-4 py-2 bg-white/90 hover:bg-white rounded-lg shadow-md flex items-center gap-2 transition-colors z-10"
           >
             <ImageIcon className="w-4 h-4" />
-            <span className="text-sm font-medium">배너 수정</span>
+            <span className="text-sm font-medium">배너 설정</span>
           </button>
         )}
 
@@ -169,7 +179,7 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
             <div className="mb-3">
               <label className="block text-sm font-medium text-gray-700 mb-2">배너 색상</label>
               <div className="flex gap-2">
-                {['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'].map(color => (
+                {['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'].map((color) => (
                   <button
                     key={color}
                     onClick={() => setBannerColor(color)}
@@ -192,7 +202,6 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
           </div>
         )}
 
-        {/* Profile Image on Banner */}
         <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-20">
           <img
             src={profileImage}
@@ -202,14 +211,12 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-6xl mx-auto px-6 pt-20 pb-12">
-        {/* Profile Section */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="flex items-start justify-between">
             <div className="flex-1 text-center">
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">dlaudwn329</h1>
-              <p className="text-gray-600 mb-3">@dlaudwn329</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">{userId || 'user'}</h1>
+              <p className="text-gray-600 mb-3">@{userId || 'user'}</p>
               <div className="flex gap-6 text-sm justify-center">
                 <span className="text-gray-700"><strong className="text-gray-900">142</strong> 친구</span>
                 <span className="text-gray-700"><strong className="text-gray-900">28</strong> 게시물</span>
@@ -242,7 +249,6 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
           </div>
         </div>
 
-        {/* Widgets Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {widgets.sort((a, b) => a.position - b.position).map((widget) => (
             <div key={widget.id} className="relative group">
@@ -252,7 +258,7 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
                     <Move className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => setWidgets(widgets.filter(w => w.id !== widget.id))}
+                    onClick={() => setWidgets(widgets.filter((w) => w.id !== widget.id))}
                     className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X className="w-4 h-4" />
@@ -264,7 +270,17 @@ export function MyPage({ userId, isOwner }: MyPageProps) {
           ))}
         </div>
 
-        {/* Add Widget Button */}
+        {isOwner && (
+          <div className="mt-6">
+            <button
+              onClick={handleLogout}
+              className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-medium transition-colors"
+            >
+              로그아웃
+            </button>
+          </div>
+        )}
+
         {isEditMode && isOwner && (
           <div className="mt-6">
             <button className="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-colors flex items-center justify-center gap-2 text-gray-600 hover:text-purple-600">
