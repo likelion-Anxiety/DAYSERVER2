@@ -314,6 +314,11 @@ app.post("/ai/generate-image", async (c) => {
       // 2. Save to Cache
       await kv.set(cacheKey, imageUrl);
 
+      // 3. Save as latest highlight for this server
+      if (serverId) {
+        await kv.set(`latest_highlight:${serverId}`, imageUrl);
+      }
+
       return c.json({ 
         imageUrl: imageUrl,
         source: "gemini-2.5-flash-image"
@@ -400,5 +405,16 @@ JSON 형식으로 반환해.
   }
 });
 
+
+app.get("/ai/latest-highlight/:serverId", async (c) => {
+  try {
+    const serverId = c.req.param("serverId");
+    const imageUrl = await kv.get(`latest_highlight:${serverId}`);
+    return c.json({ imageUrl: imageUrl || null });
+  } catch (error) {
+    console.log(`Error fetching latest highlight: ${error}`);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
 
 Deno.serve(app.fetch);

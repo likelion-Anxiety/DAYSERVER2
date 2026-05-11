@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Hash, Image as ImageIcon, Sparkles, MoreHorizontal } from 'lucide-react';
 import { ServerDisplaySettingsModal } from './ServerDisplaySettingsModal';
 import { ServerSelectorModal } from './ServerSelectorModal';
@@ -138,17 +138,32 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
         loadedSettings = readLocalSettings();
       }
 
-      const updatedServers = initialMockServers.map(server => {
+      const updatedServers = await Promise.all(initialMockServers.map(async server => {
         const savedSetting = loadedSettings.find((s: any) => s.serverId === server.id);
-        if (savedSetting) {
-          return {
-            ...server,
-            displayType: savedSetting.displayType,
-            thumbnail: savedSetting.thumbnail,
-          };
+        let displayType = savedSetting?.displayType || server.displayType;
+        let thumbnail = savedSetting?.thumbnail || server.thumbnail;
+
+        // If highlight mode but no thumbnail, try to fetch the AI generated one
+        if (displayType === 'highlight' && !thumbnail) {
+          try {
+            const res = await fetch(`${API_BASE}/ai/latest-highlight/${server.id}`, {
+              headers: { 'Authorization': `Bearer ${publicAnonKey}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.imageUrl) thumbnail = data.imageUrl;
+            }
+          } catch (e) {
+            console.error('Failed to fetch latest highlight for server', server.id, e);
+          }
         }
-        return server;
-      });
+
+        return {
+          ...server,
+          displayType,
+          thumbnail,
+        };
+      }));
       setServers(updatedServers);
     } catch (error) {
       console.error('Error loading server settings:', error);
@@ -171,10 +186,27 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
   };
 
   const handleSaveSettings = async (serverId: string, displayType: 'text' | 'highlight' | 'image', thumbnail?: string) => {
+    let finalThumbnail = thumbnail;
+
+    // If switching to highlight and no thumbnail provided, try to fetch existing one
+    if (displayType === 'highlight' && !finalThumbnail) {
+      try {
+        const res = await fetch(`${API_BASE}/ai/latest-highlight/${serverId}`, {
+          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.imageUrl) finalThumbnail = data.imageUrl;
+        }
+      } catch (e) {
+        console.error('Error fetching latest highlight on save:', e);
+      }
+    }
+
     setServers(prevServers =>
       prevServers.map(server =>
         server.id === serverId
-          ? { ...server, displayType, thumbnail }
+          ? { ...server, displayType, thumbnail: finalThumbnail }
           : server
       )
     );
@@ -182,7 +214,7 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
     const upsertLocal = () => {
       const localSettings = readLocalSettings();
       const existingIndex = localSettings.findIndex((setting) => setting.serverId === serverId);
-      const nextSetting: ServerSetting = { serverId, displayType, thumbnail };
+      const nextSetting: ServerSetting = { serverId, displayType, thumbnail: finalThumbnail };
 
       if (existingIndex >= 0) {
         localSettings[existingIndex] = nextSetting;
@@ -202,7 +234,7 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
         body: JSON.stringify({
           serverId,
           displayType,
-          thumbnail,
+          thumbnail: finalThumbnail,
         }),
       });
 
@@ -249,7 +281,7 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
             }`}
           >
             {/* ?대?吏 ??? ?꾩껜瑜??대?吏濡?梨꾩? */}
-            {primaryServer?.displayType === 'image' && primaryServer.thumbnail ? (
+            {(primaryServer?.displayType === 'image' || primaryServer?.displayType === 'highlight') && primaryServer.thumbnail ? (
               <>
                 <button
                   onClick={() => onServerClick(primaryServer.id)}
@@ -260,6 +292,11 @@ export function CalendarView({ onServerClick }: CalendarViewProps) {
                     alt={primaryServer.name}
                     className="w-full h-full object-cover"
                   />
+                  {primaryServer.displayType === 'highlight' && (
+                    <div className="absolute top-1 right-1 bg-pink-500/80 p-1 rounded-full shadow-lg">
+                      <Sparkles className="w-3 h-3 text-white" />
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                   <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
                     {dayNumber}
