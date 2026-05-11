@@ -2,7 +2,7 @@ import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.tsx";
-const app = new Hono();
+const app = new Hono().basePath("/make-server-a25a4117");
 
 // Enable logger
 app.use('*', logger(console.log));
@@ -20,12 +20,12 @@ app.use(
 );
 
 // Health check endpoint
-app.get("/make-server-a25a4117/health", (c) => {
+app.get("/health", (c) => {
   return c.json({ status: "ok" });
 });
 
 // Get messages for a specific server
-app.get("/make-server-a25a4117/messages/:serverId", async (c) => {
+app.get("/messages/:serverId", async (c) => {
   try {
     const serverId = c.req.param("serverId");
     const messages = await kv.getByPrefix(`messages:${serverId}:`);
@@ -43,7 +43,7 @@ app.get("/make-server-a25a4117/messages/:serverId", async (c) => {
 });
 
 // Post a new message
-app.post("/make-server-a25a4117/messages", async (c) => {
+app.post("/messages", async (c) => {
   try {
     const body = await c.req.json();
     const { serverId, user, content, type, image } = body;
@@ -75,7 +75,7 @@ app.post("/make-server-a25a4117/messages", async (c) => {
 });
 
 // Get server calendar settings
-app.get("/make-server-a25a4117/server-settings", async (c) => {
+app.get("/server-settings", async (c) => {
   try {
     const settings = await kv.get("server-calendar-settings");
     return c.json({ settings: settings || [] });
@@ -86,7 +86,7 @@ app.get("/make-server-a25a4117/server-settings", async (c) => {
 });
 
 // Save server calendar settings
-app.post("/make-server-a25a4117/server-settings", async (c) => {
+app.post("/server-settings", async (c) => {
   try {
     const body = await c.req.json();
     const { serverId, displayType, thumbnail } = body;
@@ -155,11 +155,21 @@ const fallbackSummary = (messages: any[]) => {
   };
 };
 
-app.post("/make-server-a25a4117/ai/summary", async (c) => {
+app.post("/ai/summary", async (c) => {
   try {
     const body = await c.req.json();
     const serverId = body?.serverId;
+    const forceRefresh = body?.forceRefresh === true;
+    
     if (!serverId) return c.json({ error: "Missing required field: serverId" }, 400);
+
+    // 1. Check Cache
+    if (!forceRefresh) {
+      const cached = await kv.get(`summary:${serverId}`);
+      if (cached) {
+        return c.json({ summary: cached, source: "cache" });
+      }
+    }
 
     const messages = await kv.getByPrefix(`messages:${serverId}:`);
     const sortedMessages = messages.sort((a: any, b: any) => {
@@ -221,7 +231,6 @@ ${transcript}
     try {
       parsed = JSON.parse(rawText);
     } catch {
-      // Fallback manual parsing if response_mime_type is not supported or fails
       const jsonStart = rawText.indexOf("{");
       const jsonEnd = rawText.lastIndexOf("}");
       if (jsonStart >= 0 && jsonEnd > jsonStart) {
@@ -229,8 +238,15 @@ ${transcript}
       }
     }
 
+    const finalSummary = parsed || fallbackSummary(sortedMessages);
+    
+    // 2. Save to Cache
+    if (parsed) {
+      await kv.set(`summary:${serverId}`, parsed);
+    }
+
     return c.json({
-      summary: parsed || fallbackSummary(sortedMessages),
+      summary: finalSummary,
       source: "gemini-3-flash",
     });
   } catch (error) {
@@ -239,7 +255,7 @@ ${transcript}
   }
 });
 
-app.post("/make-server-a25a4117/ai/generate-image", async (c) => {
+app.post("/ai/generate-image", async (c) => {
   try {
     const body = await c.req.json();
     const { prompt, aspectRatio = "1:1" } = body;
@@ -289,11 +305,21 @@ app.post("/make-server-a25a4117/ai/generate-image", async (c) => {
   }
 });
 
-app.post("/make-server-a25a4117/ai/meme-cards", async (c) => {
+app.post("/ai/meme-cards", async (c) => {
   try {
     const body = await c.req.json();
-    const summary = body?.summary || {};
+    const { serverId, summary, forceRefresh } = body;
     const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
+
+    if (!serverId) return c.json({ error: "Missing serverId" }, 400);
+
+    // 1. Check Cache
+    if (!forceRefresh) {
+      const cached = await kv.get(`cards:${serverId}`);
+      if (cached) {
+        return c.json({ cards: cached, source: "cache" });
+      }
+    }
 
     if (!geminiApiKey) {
       return c.json({ 
@@ -311,7 +337,7 @@ app.post("/make-server-a25a4117/ai/meme-cards", async (c) => {
 각 카드는 제목과 해당 카드를 위한 이미지 생성 프롬프트를 포함해야 해.
 JSON 형식으로 반환해.
 
-요약: ${JSON.stringify(summary)}
+요약: ${JSON.stringify(summary || {})}
 
 형식:
 {
@@ -339,6 +365,11 @@ JSON 형식으로 반환해.
     const cardData = await cardRes.json();
     const rawCards = JSON.parse(cardData?.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
     const cards = rawCards.cards || [];
+
+    // 2. Save to Cache
+    if (cards.length > 0) {
+      await kv.set(`cards:${serverId}`, cards);
+    }
 
     return c.json({ cards, source: "gemini-3-flash" });
   } catch (error) {

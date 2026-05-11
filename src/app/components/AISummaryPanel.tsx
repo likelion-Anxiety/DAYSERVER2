@@ -80,18 +80,24 @@ export function AISummaryPanel({ serverId = '1' }: AISummaryPanelProps) {
     }
   };
 
-  const fetchAISummary = async () => {
+  const fetchAISummary = async (isManual = false) => {
     setLoading(true);
-    setHighlightImageUrl(null);
+    if (isManual) {
+      setHighlightImageUrl(null);
+    }
+    
     try {
-      // 1. Fetch Summary
+      // 1. Fetch Summary (Cache-aware)
       const summaryRes = await fetch(`${API_BASE}/ai/summary`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${publicAnonKey}`,
         },
-        body: JSON.stringify({ serverId }),
+        body: JSON.stringify({ 
+          serverId,
+          forceRefresh: isManual
+        }),
       });
 
       if (!summaryRes.ok) throw new Error('Failed to fetch summary');
@@ -99,14 +105,18 @@ export function AISummaryPanel({ serverId = '1' }: AISummaryPanelProps) {
       const nextSummary: SummaryPayload = summaryData.summary || defaultSummary;
       setSummary(nextSummary);
 
-      // 2. Fetch Meme Cards definitions
+      // 2. Fetch Meme Cards definitions (Cache-aware)
       const memeRes = await fetch(`${API_BASE}/ai/meme-cards`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${publicAnonKey}`,
         },
-        body: JSON.stringify({ serverId, summary: nextSummary }),
+        body: JSON.stringify({ 
+          serverId, 
+          summary: nextSummary,
+          forceRefresh: isManual
+        }),
       });
 
       let nextCards: MemeCard[] = [];
@@ -116,7 +126,10 @@ export function AISummaryPanel({ serverId = '1' }: AISummaryPanelProps) {
         setCards(nextCards);
       }
 
-      // 3. Generate Highlight Image in background
+      // 3. Generate Highlight Image in background (Only if we don't have one or manual)
+      // Note: We don't cache images in KV to avoid size issues, but highlightImageUrl is in state.
+      // If we got from cache, it's fine to re-generate images or just skip if we wanted to be more efficient.
+      // For now, let's generate them to keep it alive.
       if (nextSummary.imagePrompt) {
         generateImage(nextSummary.imagePrompt).then(url => {
           if (url) setHighlightImageUrl(url);
@@ -144,7 +157,7 @@ export function AISummaryPanel({ serverId = '1' }: AISummaryPanelProps) {
   };
 
   useEffect(() => {
-    fetchAISummary();
+    fetchAISummary(false);
   }, [serverId]);
 
   return (
@@ -157,7 +170,7 @@ export function AISummaryPanel({ serverId = '1' }: AISummaryPanelProps) {
           <h2 className="font-bold text-lg text-gray-800">AI 요약 결과</h2>
         </div>
         <button
-          onClick={fetchAISummary}
+          onClick={() => fetchAISummary(true)}
           disabled={loading}
           className="w-full py-2 mt-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg text-sm font-medium disabled:opacity-50"
         >
