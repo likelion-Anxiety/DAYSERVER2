@@ -146,7 +146,7 @@ export default function App() {
         {currentView === 'chat' && (
           <>
             <ChatTimeline serverId={selectedServer || '1'} user={user} />
-            <AISummaryPanel />
+            <AISummaryPanel serverId={selectedServer || '1'} />
           </>
         )}
         {currentView === 'calendar' && <CalendarView onServerClick={handleServerClick} />}
