@@ -15,17 +15,50 @@ import { MyPage } from './components/MyPage';
 import { supabase } from '../../utils/supabase/client';
 
 type View = 'home' | 'chat' | 'calendar' | 'friend' | 'mypage';
+const APP_STATE_KEY = 'dayserver-app-state';
 
 export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [currentView, setCurrentView] = useState<View>('home');
-  const [selectedServer, setSelectedServer] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<View>(() => {
+    try {
+      const raw = localStorage.getItem(APP_STATE_KEY);
+      if (!raw) return 'home';
+      const parsed = JSON.parse(raw);
+      return parsed.currentView || 'home';
+    } catch {
+      return 'home';
+    }
+  });
+  const [selectedServer, setSelectedServer] = useState<string | null>(() => {
+    try {
+      const raw = localStorage.getItem(APP_STATE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed.selectedServer ?? null;
+    } catch {
+      return null;
+    }
+  });
   const [mobileTab, setMobileTab] = useState('home');
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [showMobileAI, setShowMobileAI] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        APP_STATE_KEY,
+        JSON.stringify({
+          currentView,
+          selectedServer,
+        }),
+      );
+    } catch {
+      // ignore
+    }
+  }, [currentView, selectedServer]);
 
   // Check auth session on mount
   useEffect(() => {
