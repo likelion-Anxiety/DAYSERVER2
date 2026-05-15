@@ -1,0 +1,59 @@
+@layer base {
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+  }
+
+  body {
+    font-family: var(--font-body);
+    letter-spacing: -0.01em;
+    background:
+      radial-gradient(1100px 620px at -10% -20%, rgba(163, 102, 78, 0.16), transparent 55%),
+      radial-gradient(920px 500px at 110% 12%, rgba(55, 68, 78, 0.11), transparent 58%),
+      #f6f1ea;
+    color: #1f2529;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+}
+
+@layer utilities {
+  .grain-overlay {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .grain-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: radial-gradient(#000 0.45px, transparent 0.45px);
+    background-size: 3px 3px;
+    mix-blend-mode: soft-light;
+  }
+
+  .hero-reveal {
+    animation: hero-reveal 800ms ease-out both;
+  }
+
+  @keyframes hero-reveal {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+}

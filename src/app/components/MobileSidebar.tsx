@@ -1,4 +1,4 @@
-import { Calendar, Hash, Sparkles, X, Plus, UserPlus, Home } from 'lucide-react';
+import { Calendar, Hash, Plus, Sparkles, UserPlus, X } from 'lucide-react';
 import logoIcon from '../../imports/_______.png';
 
 interface Channel {
@@ -23,74 +23,69 @@ interface MobileSidebarProps {
   onFriendClick?: (friendId: string) => void;
 }
 
-export function MobileSidebar({ isOpen, onClose, onOpenModal, onServerClick, onHomeClick, onCalendarClick, onFriendClick }: MobileSidebarProps) {
+export function MobileSidebar({
+  isOpen,
+  onClose,
+  onOpenModal,
+  onServerClick,
+  onHomeClick,
+  onCalendarClick,
+  onFriendClick,
+}: MobileSidebarProps) {
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40 md:hidden"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-40 bg-black/45 md:hidden" onClick={onClose} />
 
-      {/* Sidebar */}
-      <div className="fixed left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-gradient-to-br from-purple-50 to-pink-50 z-50 flex flex-col md:hidden">
-        {/* Header */}
-        <div className="p-6 border-b border-purple-200 bg-white/50 backdrop-blur-sm">
-          <div className="flex items-center justify-between mb-4">
+      <aside className="fixed left-0 top-0 bottom-0 z-50 w-80 max-w-[85vw] bg-[#f7f1e8] border-r border-[#d7c9b8] flex flex-col md:hidden">
+        <div className="p-5 border-b border-[#dacdbc] bg-white/55 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
             <button
               onClick={() => {
                 onHomeClick();
                 onClose();
               }}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-2"
             >
-              <img src={logoIcon} alt="DAYSERVER" className="w-10 h-10 rounded-xl" />
-              <div>
-                <h1 className="font-bold text-lg text-purple-600">
-                  DAYSERVER
-                </h1>
-                <p className="text-xs text-purple-600">우리만의 추억 서버</p>
+              <img src={logoIcon} alt="DAYSERVER" className="size-10 rounded-xl" />
+              <div className="text-left">
+                <p className="text-[11px] tracking-[0.16em] text-[#6f7b83]">DAYSERVER</p>
+                <p className="text-base font-semibold text-[#253037]">Memory Archive</p>
               </div>
             </button>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-purple-100"
-            >
-              <X className="w-5 h-5 text-gray-600" />
+            <button onClick={onClose} className="size-9 rounded-full border border-[#cdbca7] text-[#455760] inline-flex items-center justify-center">
+              <X className="size-5" />
             </button>
           </div>
         </div>
 
-        {/* Server Actions */}
-        <div className="p-4 border-b border-purple-200 space-y-2 bg-white/30">
+        <div className="p-4 border-b border-[#dacdbc] space-y-2">
           <button
             onClick={() => {
               onOpenModal();
               onClose();
             }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white transition-all shadow-sm"
+            className="w-full inline-flex items-center gap-2 rounded-xl bg-[#253037] px-3 py-2.5 text-sm font-semibold text-white"
           >
-            <Plus className="w-4 h-4" />
-            <span className="text-sm font-medium">서버 만들기</span>
+            <Plus className="size-4" />
+            서버 만들기
           </button>
           <button
             onClick={() => {
               onOpenModal();
               onClose();
             }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-400 to-purple-500 hover:from-purple-500 hover:to-purple-600 text-white transition-all shadow-sm"
+            className="w-full inline-flex items-center gap-2 rounded-xl border border-[#cab8a2] bg-[#fbf5eb] px-3 py-2.5 text-sm font-semibold text-[#4e5d65]"
           >
-            <UserPlus className="w-4 h-4" />
-            <span className="text-sm font-medium">서버 참여하기</span>
+            <UserPlus className="size-4" />
+            서버 참여하기
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="mb-4">
-            <h2 className="text-xs font-semibold text-purple-600 mb-2 px-2">캘린더</h2>
+        <div className="flex-1 overflow-y-auto p-4 space-y-5">
+          <section>
+            <h2 className="mb-2 px-2 text-[11px] tracking-[0.16em] text-[#748189]">CALENDAR</h2>
             <button
               onClick={() => {
                 if (onCalendarClick) {
@@ -98,46 +93,48 @@ export function MobileSidebar({ isOpen, onClose, onOpenModal, onServerClick, onH
                   onClose();
                 }
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-purple-100 transition-colors text-left"
+              className="w-full rounded-xl px-3 py-2.5 text-left text-sm text-[#33454d] hover:bg-[#eee3d3] transition-colors inline-flex items-center gap-2"
             >
-              <Calendar className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-medium text-gray-700">서버 캘린더</span>
+              <Calendar className="size-4 text-[#4f6a79]" />
+              서버 캘린더
             </button>
-          </div>
+          </section>
 
-          <div className="mb-4">
-            <h2 className="text-xs font-semibold text-purple-600 mb-2 px-2">CHANNEL</h2>
-            <div className="space-y-1">
+          <section>
+            <h2 className="mb-2 px-2 text-[11px] tracking-[0.16em] text-[#748189]">CHANNEL</h2>
+            <div className="space-y-1.5">
               {channels.map((channel) => (
                 <button
                   key={channel.id}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-purple-100 transition-colors text-left group"
+                  className="w-full rounded-xl px-3 py-2.5 text-left hover:bg-[#eee3d3] transition-colors"
                   onClick={() => {
                     onServerClick(channel.id);
                     onClose();
                   }}
                 >
-                  <Hash className="w-4 h-4 text-purple-400 group-hover:text-purple-600" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-700">{channel.name}</p>
-                    <p className="text-xs text-gray-500">{channel.date}</p>
+                  <div className="flex items-center gap-2">
+                    <Hash className="size-4 text-[#7a4b3f]" />
+                    <div>
+                      <p className="text-sm font-medium text-[#2d3a42]">{channel.name}</p>
+                      <p className="text-xs text-[#798790]">{channel.date}</p>
+                    </div>
                   </div>
                 </button>
               ))}
             </div>
-          </div>
+          </section>
 
-          <div className="mb-4">
-            <h2 className="text-xs font-semibold text-purple-600 mb-2 px-2">AI 하이라이트</h2>
-            <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-purple-100 transition-colors text-left">
-              <Sparkles className="w-4 h-4 text-pink-400" />
-              <span className="text-sm font-medium text-gray-700">밈 카드</span>
+          <section>
+            <h2 className="mb-2 px-2 text-[11px] tracking-[0.16em] text-[#748189]">AI</h2>
+            <button className="w-full rounded-xl px-3 py-2.5 text-left text-sm text-[#33454d] hover:bg-[#eee3d3] transition-colors inline-flex items-center gap-2">
+              <Sparkles className="size-4 text-[#a1604c]" />
+              오늘의 밈 카드
             </button>
-          </div>
+          </section>
 
-          <div>
-            <h2 className="text-xs font-semibold text-purple-600 mb-2 px-2">친구</h2>
-            <div className="space-y-2">
+          <section>
+            <h2 className="mb-2 px-2 text-[11px] tracking-[0.16em] text-[#748189]">FRIENDS</h2>
+            <div className="space-y-1.5">
               {[
                 { id: '1', name: '김민수', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=1', online: true },
                 { id: '2', name: '이지은', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=2', online: true },
@@ -152,36 +149,35 @@ export function MobileSidebar({ isOpen, onClose, onOpenModal, onServerClick, onH
                       onClose();
                     }
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-purple-100 transition-colors text-left group"
+                  className="w-full rounded-xl px-3 py-2.5 text-left hover:bg-[#eee3d3] transition-colors"
                 >
-                  <div className="relative">
-                    <img
-                      src={friend.avatar}
-                      alt={friend.name}
-                      className="w-8 h-8 rounded-full"
-                    />
-                    <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${friend.online ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative">
+                      <img src={friend.avatar} alt={friend.name} className="size-8 rounded-full border border-[#d4c7b6]" />
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border border-white ${
+                          friend.online ? 'bg-emerald-500' : 'bg-slate-400'
+                        }`}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-[#33454d]">{friend.name}</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700">{friend.name}</span>
                 </button>
               ))}
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* User Profile */}
-        <div className="p-4 border-t border-purple-200 bg-white/50 backdrop-blur-sm">
+        <div className="p-4 border-t border-[#dacdbc] bg-white/55">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold">나</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-700">형진</p>
-              <p className="text-xs text-gray-500">온라인</p>
+            <div className="size-10 rounded-full bg-[#8c4d3f] text-white flex items-center justify-center font-semibold">나</div>
+            <div>
+              <p className="text-sm font-semibold text-[#2c3a42]">형진</p>
+              <p className="text-xs text-[#798790]">온라인</p>
             </div>
           </div>
         </div>
-      </div>
+      </aside>
     </>
   );
 }

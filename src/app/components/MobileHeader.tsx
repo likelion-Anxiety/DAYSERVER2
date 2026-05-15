@@ -1,4 +1,4 @@
-import { Menu, Search, Sparkles } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 
 interface MobileHeaderProps {
   onMenuClick: () => void;
@@ -7,25 +7,19 @@ interface MobileHeaderProps {
 
 export function MobileHeader({ onMenuClick, channelName }: MobileHeaderProps) {
   return (
-    <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 z-30 md:hidden">
+    <div className="fixed top-0 left-0 right-0 z-30 border-b border-[#d6c8b6] bg-[#f8f2e9]/95 px-4 py-3 backdrop-blur-sm md:hidden">
       <div className="flex items-center justify-between">
-        <button
-          onClick={onMenuClick}
-          className="w-10 h-10 flex items-center justify-center text-white"
-        >
-          <Menu className="w-6 h-6" />
+        <button onClick={onMenuClick} className="size-10 rounded-full border border-[#cfbfa9] text-[#33464f] inline-flex items-center justify-center">
+          <Menu className="size-5" />
         </button>
 
         <div className="flex-1 text-center">
-          <div className="flex items-center justify-center gap-2">
-            <Sparkles className="w-5 h-5 text-white" />
-            <h1 className="font-bold text-white">{channelName}</h1>
-          </div>
-          <p className="text-xs text-white/80">2026.05.09</p>
+          <h1 className="font-semibold text-[#253037]">{channelName}</h1>
+          <p className="text-[11px] text-[#708089]">오늘의 기록 아카이브</p>
         </div>
 
-        <button className="w-10 h-10 flex items-center justify-center text-white">
-          <Search className="w-6 h-6" />
+        <button className="size-10 rounded-full border border-[#cfbfa9] text-[#33464f] inline-flex items-center justify-center">
+          <Search className="size-5" />
         </button>
       </div>
     </div>

@@ -110,10 +110,10 @@ export default function App() {
   // Show loading state
   if (loading) {
     return (
-      <div className="size-full flex items-center justify-center bg-gray-50">
+      <div className="size-full flex items-center justify-center bg-transparent">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">로딩 중...</p>
+          <div className="w-12 h-12 border-4 border-[#8c4d3f] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#5a6a73]">로딩 중...</p>
         </div>
       </div>
     );
@@ -125,7 +125,7 @@ export default function App() {
   }
 
   return (
-    <div className="size-full flex bg-gray-50 relative">
+    <div className="size-full flex bg-transparent relative">
       {/* Desktop Layout */}
       <div className="hidden md:flex w-full">
         <Sidebar
